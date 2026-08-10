@@ -22,7 +22,7 @@ việc "chết sớm" này cứu bạn, so với việc để mặc định `"ch
 > ngay trong log Railway. Nếu field này có mặc định kiểu `"changeme"`, app vẫn
 > chạy bình thường, `/health` vẫn trả 200, tưởng đã deploy thành công. Nhưng
 > lúc đó bất kỳ ai gửi header `X-API-Key: changeme` cũng gọi được `/ask` miễn
-> phí bằng "khóa" của tôi và chỉ phát hiện ra khi xem hóa đơn hoặc log bất
+> phí bằng "khóa" đó và chỉ phát hiện ra khi xem hóa đơn hoặc log bất
 > thường tức là sau khi thiệt hại đã xảy ra, không phải lúc còn đang ngồi
 > nhìn màn hình deploy.
 
@@ -34,16 +34,16 @@ Chạy service và gọi `/ask` vài lần. Dán một dòng log JSON bạn thu 
 nêu **hai** việc bạn làm được với dòng log đó mà `print("đã trả lời xong")`
 không làm được.
 
-> Dòng log thật tôi thu được khi gọi `/ask`:
+> Dòng log thật thu được khi gọi `/ask`:
 >
 > ```json
 > {"event": "ask_completed", "level": "info", "timestamp": "2026-08-10T03:23:50+00:00", "user_id": "sv-test", "tokens_in": 3, "tokens_out": 41, "cost_usd": 2.505e-05}
 > ```
 >
 > Hai việc `print("đã trả lời xong")` không làm được: (1) lọc/tổng hợp theo
-> trường — ví dụ `grep user_id=sv01 | jq .cost_usd` để tính user nào tiêu nhiều
+> trường, ví dụ `grep user_id=sv01 | jq .cost_usd` để tính user nào tiêu nhiều
 > tiền nhất trong ngày, print không có cấu trúc nên không tách được field; (2)
-> đếm tỷ lệ lỗi tự động — công cụ log (Datadog, Railway logs) có thể đếm số
+> đếm tỷ lệ lỗi tự động, công cụ log (Datadog, Railway logs) có thể đếm số
 > dòng `"level":"error"` trong 5 phút gần nhất và tự bắn cảnh báo, còn chuỗi
 > text tự do thì máy không biết đâu là "lỗi" đâu là "bình thường".
 
@@ -71,7 +71,7 @@ Giải thích: phần dung lượng chênh lệch đó là những gì?
 > | 1 stage (`python:3.11`, `COPY . .` rồi `pip install`) | 1.73 GB      |
 > | Multi-stage (`python:3.11-slim`, tách builder/runtime)    | 270 MB       |
 >
-> Chênh lệch ~1.46GB đến từ ba chỗ: (1) base image — `python:3.11` đầy đủ mang
+> Chênh lệch ~1.46GB đến từ ba chỗ: (1) base image, `python:3.11` đầy đủ mang
 > theo cả bộ công cụ biên dịch (gcc, make...) và rất nhiều package hệ điều hành
 > Debian không dùng tới, còn `slim` cắt gần hết; (2) toàn bộ cache/artifact của
 > `pip install` (mã nguồn `.tar.gz` tải về, file build trung gian khi biên dịch
@@ -92,10 +92,10 @@ layer nào được dùng lại từ cache, layer nào phải chạy lại? Nế
 > `COPY requirements.txt .` và `RUN pip install --prefix=/install ...` ở stage
 > `builder` được lấy từ cache (Docker thấy `requirements.txt` không đổi nội
 > dung, hash layer giống hệt cũ), chỉ có layer `COPY app ./app` trở về sau (và
-> `RUN chown`) phải chạy lại — build xong trong vài giây. Nếu đặt `COPY . .`
+> `RUN chown`) phải chạy lại, build xong trong vài giây. Nếu đặt `COPY . .`
 > lên trước `RUN pip install`: mỗi lần sửa dù chỉ một ký tự trong code, hash
 > của layer `COPY . .` đổi, Docker coi mọi layer sau nó là "bẩn" và phải chạy
-> lại từ đó — kể cả `pip install`, nghĩa là cài lại toàn bộ thư viện (tốn hàng
+> lại từ đó, kể cả `pip install`, nghĩa là cài lại toàn bộ thư viện (tốn hàng
 > chục giây tới vài phút) chỉ vì một dòng code không liên quan gì tới
 > dependency.
 
@@ -115,7 +115,7 @@ lệnh `USER` cắt đứt chuỗi đó ở chỗ nào.
 > escape (kernel bug, volume mount cấu hình sai, socket Docker bị lộ), quyền
 > root trong container leo thẳng thành quyền root trên máy host thật.
 > Lệnh `USER appuser` (uid 10001) cắt chuỗi ngay ở bước thứ hai: dù exploit vẫn
-> chạy lệnh được, nó chỉ có quyền của một user thường — không ghi được vào thư
+> chạy lệnh được, nó chỉ có quyền của một user thường, không ghi được vào thư
 > mục hệ thống, không phải root nên dù có escape container cũng không tự động
 > thành root trên host.
 
@@ -133,7 +133,7 @@ con số đó.
 > mức của phút X), rồi gửi tiếp 10 request nữa vào giây 00–01 của phút X+1 (bộ
 > đếm vừa reset về 0 nên lại được phép đủ 10 request). Với cách đếm theo phút
 > đồng hồ, cả hai đợt đều "hợp lệ" riêng lẻ, nhưng gộp lại là 20 request chỉ
-> trong khoảng 1–2 giây thực tế — đúng lỗ hổng mà sliding window (đếm 60 giây
+> trong khoảng 1–2 giây thực tế, đúng lỗ hổng mà sliding window (đếm 60 giây
 > gần nhất tính từ thời điểm request, không phải theo mốc phút cố định) không
 > mắc phải.
 
@@ -144,14 +144,14 @@ con số đó.
 Hai cơ chế này khác nhau ở điểm nào? Cho một tình huống mà rate limit cho qua
 nhưng cost guard phải chặn, và một tình huống ngược lại.
 
-> Rate limit giới hạn **tần suất** (bao nhiêu request trong một khoảng thời
-> gian), cost guard giới hạn **số tiền** (tổng chi phí cộng dồn trong tháng),
+> Rate limit giới hạn tần suất (bao nhiêu request trong một khoảng thời
+> gian), cost guard giới hạn số tiền (tổng chi phí cộng dồn trong tháng),
 > hai đại lượng độc lập nhau. Tình huống rate limit cho qua nhưng cost guard
 > chặn: user chỉ gửi 3 request/phút (thấp hơn hạn mức 10/phút nhiều), nhưng mỗi
 > câu hỏi rất dài (hàng chục nghìn token) khiến chỉ vài chục request trong
-> tháng đã vượt `MONTHLY_BUDGET_USD` — rate limit không có lý do gì để chặn,
+> tháng đã vượt `MONTHLY_BUDGET_USD`, rate limit không có lý do gì để chặn,
 > cost guard mới là lớp chặn được. Tình huống ngược lại: user gửi đúng 15
-> request/phút với câu hỏi rất ngắn (gần như không tốn tiền) — rate limit chặn
+> request/phút với câu hỏi rất ngắn (gần như không tốn tiền), rate limit chặn
 > ở request thứ 11 (429) dù tổng chi phí cả tháng còn cách xa ngân sách, cost
 > guard nếu đứng một mình sẽ vẫn cho qua.
 
@@ -165,10 +165,10 @@ Nếu gộp hai endpoint làm một và cho nó kiểm tra Redis, chuyện gì x
 > Thứ tự sự kiện nếu gộp `/health` = `/ready` (cả hai đều check Redis):
 > (1) Redis mất kết nối → cả 3 container cùng lúc gọi `store.ping()` trong
 > endpoint health thất bại → cả 3 cùng trả 503; (2) orchestrator coi 503 ở
-> endpoint liveness là "process chết", ra lệnh **restart** cả 3 container gần
+> endpoint liveness là "process chết", ra lệnh restart cả 3 container gần
 > như đồng thời (đây là điểm khác biệt chính so với thiết kế đúng: đáng lẽ chỉ
 > `/ready` báo lỗi để load balancer rút traffic, container vẫn sống); (3) trong
-> lúc cả 3 đang restart, không còn container nào chạy để phục vụ request —
+> lúc cả 3 đang restart, không còn container nào chạy để phục vụ request,
 > dịch vụ sập hoàn toàn dù chưa từng có container nào thực sự bị treo hay
 > crash; (4) 30 giây sau Redis hồi phục, nhưng 3 container vẫn đang trong chu
 > trình khởi động lại (kéo image, chạy lifespan, chờ healthcheck) nên downtime
@@ -183,16 +183,16 @@ Chạy `docker compose up --scale agent=3` rồi gọi `/ask` nhiều lần vớ
 `X-User-Id`. Quan sát `history_length` trong response. Nếu lịch sử được lưu
 trong một dict Python thay vì Redis, bạn sẽ thấy con số đó thay đổi thế nào?
 
-> Tôi đã chạy thật `docker compose up -d --scale agent=3` (vì compose map cứng
+> Đã chạy thật `docker compose up -d --scale agent=3` (vì compose map cứng
 > `8000:8000` nên phải đổi sang dải cổng `8000-8010:8000` để 3 container không
 > tranh cổng), rồi gọi `/ask` 5 lần với cùng `X-User-Id` nhưng đổi cổng
 > (container) mỗi lần: `history_length` trả về lần lượt `0 → 2 → 4 → 6 → 8`,
-> tăng đều dù request rơi vào container 1, 2 hay 3 — vì lịch sử nằm trong Redis
+> tăng đều dù request rơi vào container 1, 2 hay 3, vì lịch sử nằm trong Redis
 > dùng chung. Nếu lưu trong một dict Python (RAM riêng của từng process) thay
 > vì Redis: mỗi container có bộ nhớ tách biệt, `history_length` sẽ không tăng
-> đều nữa mà nhảy lộn xộn theo container nào nhận request — ví dụ request 1 và
+> đều nữa mà nhảy lộn xộn theo container nào nhận request, ví dụ request 1 và
 > 4 cùng rơi vào container A thì A báo `history_length=2`, còn request 2, 3, 5
-> rơi vào B/C sẽ báo `history_length=0` hoặc `2` dù thực tế đã hỏi 5 lần —
+> rơi vào B/C sẽ báo `history_length=0` hoặc `2` dù thực tế đã hỏi 5 lần,
 > agent trông như "mất trí nhớ" ngẫu nhiên.
 
 ---
@@ -206,11 +206,11 @@ tìm ra nguyên nhân bằng cách nào, và sửa ra sao?
 > Lỗi gặp khi deploy lên Railway: container liên tục crash-restart, healthcheck
 > `/health` timeout, `Deploy failed`. Thông báo lỗi trong log:
 > `Error: Invalid value for '--port': '$PORT' is not a valid integer.`
-> Nguyên nhân: tôi đặt `startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"` trong `railway.toml`. Railway chạy `startCommand` trực tiếp
+> Nguyên nhân: `railway.toml` đặt `startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"`. Railway chạy `startCommand` trực tiếp
 > (không qua shell), nên `$PORT` không được hệ điều hành nội suy thành số cổng
-> thật — uvicorn nhận đúng chuỗi ký tự `"$PORT"` làm tham số `--port` và báo
-> lỗi vì đó không phải số nguyên. Tôi tìm ra bằng cách chạy `railway logs` để
+> thật, uvicorn nhận đúng chuỗi ký tự `"$PORT"` làm tham số `--port` và báo
+> lỗi vì đó không phải số nguyên. Tìm ra nguyên nhân bằng cách chạy `railway logs` để
 > đọc traceback thực tế thay vì đoán. Cách sửa: xóa hẳn dòng `startCommand`
 > trong `railway.toml`, để Railway dùng thẳng `CMD` đã viết đúng trong
-> `Dockerfile` (`sh -c "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"`) — vì có `sh -c` nên biến môi trường được shell nội suy đúng
+> `Dockerfile` (`sh -c "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"`), vì có `sh -c` nên biến môi trường được shell nội suy đúng
 > trước khi truyền cho uvicorn.
